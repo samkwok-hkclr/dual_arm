@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="dual_arm">
+
+  <xacro:include filename="$(find dual_arm_description)/urdf/dual_arm.urdf.xacro" />
+  <xacro:include filename="$(find dual_arm_configure)/config/dual_arm.ros2_control.xacro" />
+
+  <link name="world"/>
+
+  <xacro:dual_arm name="dual_arm_demo" parent="world">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </xacro:dual_arm>
+
+  <xacro:dual_arm_ros2_control 
+    sim_left="true" can_interface_left="can0"
+    sim_right="true" can_interface_right="can1"
+    namespace="upper_orin"
+  />
+
+</robot>

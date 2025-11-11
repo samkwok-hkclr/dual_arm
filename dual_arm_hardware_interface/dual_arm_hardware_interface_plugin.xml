@@ -1,0 +1,10 @@
+<library path="dual_arm_hardware_interface">
+  <class 
+    name="dual_arm_hardware_interface/DualArmHardwareInterface" 
+    type="dual_arm_hardware_interface::DualArmHardwareInterface" 
+    base_class_type="hardware_interface::SystemInterface">
+    <description>
+      Hardware interface for CAN-based motors used in robotic arms.
+    </description>
+  </class>
+</library>

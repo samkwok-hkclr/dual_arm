@@ -1,0 +1,147 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:macro name="dual_arm_ros2_control" params="sim_left sim_right can_interface_left can_interface_right namespace">
+    <ros2_control name="right_arm" type="system">
+      <hardware>
+        <xacro:if value="${sim_right}">
+          <plugin>mock_components/GenericSystem</plugin>
+        </xacro:if>
+        <xacro:unless value="${sim_right}">
+          <plugin>dual_arm_hardware_interface/DualArmHardwareInterface</plugin>
+          <param name="can_interface">${can_interface_right}</param>
+          <param name="namespace">${namespace}</param>
+        </xacro:unless>
+      </hardware>
+      
+      <joint name="joint1_right">
+        <command_interface name="position"/>
+        <command_interface name="velocity"/>
+        <state_interface name="position"/>
+        <state_interface name="velocity"/>
+        <param name="can_id">0x01</param>
+        <param name="position_offset">-1374770</param>
+      </joint>
+      <joint name="joint2_right">
+        <command_interface name="position"/>
+        <command_interface name="velocity"/>
+        <state_interface name="position"/>
+        <state_interface name="velocity"/>
+        <param name="can_id">0x02</param>
+        <param name="position_offset">10668</param>
+      </joint>
+      <joint name="joint3_right">
+        <command_interface name="position"/>
+        <command_interface name="velocity"/>
+        <state_interface name="position"/>
+        <state_interface name="velocity"/>
+        <param name="can_id">0x03</param>
+        <param name="position_offset">565960</param>
+      </joint>
+      <joint name="joint4_right">
+        <command_interface name="position"/>
+        <command_interface name="velocity"/>
+        <state_interface name="position"/>
+        <state_interface name="velocity"/>
+        <param name="can_id">0x04</param>
+        <param name="position_offset">-610192</param>
+      </joint>
+      <joint name="joint5_right">
+        <command_interface name="position"/>
+        <command_interface name="velocity"/>
+        <state_interface name="position"/>
+        <state_interface name="velocity"/>
+        <param name="can_id">0x05</param>
+        <param name="position_offset">1319010</param>
+      </joint>
+      <joint name="joint6_right">
+        <command_interface name="position"/>
+        <command_interface name="velocity"/>
+        <state_interface name="position"/>
+        <state_interface name="velocity"/>
+        <param name="can_id">0x06</param>
+        <param name="position_offset">-1217000</param>
+        <!-- <param name="position_offset">-1256290</param> -->
+      </joint>
+      <joint name="joint7_right">
+        <command_interface name="position"/>
+        <command_interface name="velocity"/>
+        <state_interface name="position"/>
+        <state_interface name="velocity"/>
+        <param name="can_id">0x07</param>
+        <param name="position_offset">-23386</param>
+        <!-- <param name="position_offset">-64386</param> -->
+      </joint>
+    </ros2_control>
+
+    <ros2_control name="left_arm" type="system">
+      <hardware>
+        <xacro:if value="${sim_left}">
+          <plugin>mock_components/GenericSystem</plugin>
+        </xacro:if>
+        <xacro:unless value="${sim_left}">
+          <plugin>dual_arm_hardware_interface/DualArmHardwareInterface</plugin>
+          <param name="can_interface">${can_interface_left}</param>
+          <param name="namespace">${namespace}</param>
+        </xacro:unless>
+      </hardware>
+        <joint name="joint1_left">
+          <command_interface name="position"/>
+          <command_interface name="velocity"/>
+          <state_interface name="position"/>
+          <state_interface name="velocity"/>
+          <param name="can_id">0x01</param>
+          <param name="position_offset">-1441450</param>
+        </joint>
+        <joint name="joint2_left">
+          <command_interface name="position"/>
+          <command_interface name="velocity"/>
+          <state_interface name="position"/>
+          <state_interface name="velocity"/>
+          <param name="can_id">0x02</param>
+          <param name="position_offset">-1726200</param>
+        </joint>
+        <joint name="joint3_left">
+          <command_interface name="position"/>
+          <command_interface name="velocity"/>
+          <state_interface name="position"/>
+          <state_interface name="velocity"/>
+          <param name="can_id">0x03</param>
+          <param name="position_offset">-1708000</param>
+        </joint>
+        <joint name="joint4_left">
+          <command_interface name="position"/>
+          <command_interface name="velocity"/>
+          <state_interface name="position"/>
+          <state_interface name="velocity"/>
+          <param name="can_id">0x04</param>
+          <param name="position_offset">453945</param>
+        </joint>
+        <joint name="joint5_left">
+          <command_interface name="position"/>
+          <command_interface name="velocity"/>
+          <state_interface name="position"/>
+          <state_interface name="velocity"/>
+          <param name="can_id">0x05</param>
+          <param name="position_offset">-1427110</param>
+        </joint>
+        <joint name="joint6_left">
+          <command_interface name="position"/>
+          <command_interface name="velocity"/>
+          <state_interface name="position"/>
+          <state_interface name="velocity"/>
+          <param name="can_id">0x06</param>
+          <param name="position_offset">-177993</param>
+        </joint>
+        <joint name="joint7_left">
+          <command_interface name="position"/>
+          <command_interface name="velocity"/>
+          <state_interface name="position"/>
+          <state_interface name="velocity"/>
+          <param name="can_id">0x07</param>
+          <param name="position_offset">-465092</param>
+          <!-- <param name="position_offset">-475092</param> -->
+        </joint>
+    </ros2_control>
+
+  </xacro:macro>
+</robot>
