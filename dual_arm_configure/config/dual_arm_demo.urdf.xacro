@@ -13,7 +13,6 @@
   <xacro:dual_arm_ros2_control 
     sim_left="true" can_interface_left="can0"
     sim_right="true" can_interface_right="can1"
-    namespace="upper_orin"
-  />
+    namespace="upper_orin" />
 
 </robot>
