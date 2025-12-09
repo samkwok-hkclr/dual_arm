@@ -140,7 +140,31 @@ CallbackReturn DualArmHardwareInterface::on_configure(const rclcpp_lifecycle::St
 {
   RCLCPP_INFO(logger_, "Start the configure state");
 
-  if (!wait_for_subscription())
+  auto create_wait_for_subscription = [this](uint32_t max_attempts, std::chrono::milliseconds check_interval) -> std::function<bool(void)> {
+    return [this, max_attempts, check_interval]() -> bool {
+      uint32_t attempt = 0;
+      rclcpp::Rate rate(check_interval);
+      
+      while (rclcpp::ok()) 
+      {
+        if (can_pub_ && can_pub_->get_subscription_count() > 0)
+          return true;
+        
+        if (attempt >= max_attempts)
+          return false;
+        
+        attempt++;
+        RCLCPP_WARN(logger_, "waiting for socketcan subscription");
+        rate.sleep();
+      }
+      
+      return false;
+    };
+  };
+
+  auto wait_func = create_wait_for_subscription(60, std::chrono::seconds(1));
+
+  if (!wait_func())
   {
     RCLCPP_ERROR(logger_, "Failed to wait for socketcan subscription");
     return CallbackReturn::ERROR;
@@ -212,7 +236,7 @@ CallbackReturn DualArmHardwareInterface::on_activate(const rclcpp_lifecycle::Sta
 {
   RCLCPP_INFO(logger_, "Start the activate state");
 
-  if (is_activated()) // why need to check?
+  if (is_activated()) 
   {
     RCLCPP_FATAL(logger_, "Double on_activate()");
     return CallbackReturn::ERROR;
@@ -295,7 +319,7 @@ CallbackReturn DualArmHardwareInterface::on_cleanup(const rclcpp_lifecycle::Stat
   if (executor_thread_.joinable()) 
     executor_thread_.join();
 
-  RCLCPP_INFO(logger_, "Clean successfully!");
+  RCLCPP_INFO(logger_, "Clean up successfully!");
   return CallbackReturn::SUCCESS;
 }
 
@@ -467,31 +491,41 @@ void DualArmHardwareInterface::send_can_frame(uint32_t can_id, uint32_t id_offse
     return;
   }
 
-  FdFrame frame(rosidl_runtime_cpp::MessageInitialization::ZERO);
+  if (!can_pub_)
+  {
+    RCLCPP_WARN(node_->get_logger(), "CAN publisher does not initialized!");
+    return;
+  }
 
-  frame.header.stamp = node_->now();
+  if (can_pub_->get_subscription_count() == 0)
+  {
+    RCLCPP_WARN(node_->get_logger(), "No CAN subscription!");
+    return;
+  }
+
+  auto frame = std::make_unique<FdFrame>();
+
+  frame->header.stamp = node_->now();
 
   if (id_offset == CanIdOffset::POS_CTRL_ID_OFFSET ||
       id_offset == CanIdOffset::VEL_CTRL_ID_OFFSET ||
       id_offset == CanIdOffset::CUR_CTRL_ID_OFFSET) 
   {
-    // 单字节命令
-    frame.id = can_id + id_offset;
-    frame.len = 4;
-    frame.data.resize(frame.len);
-    frame.data[0] = static_cast<uint8_t>(value & 0xFF);
-    frame.data[1] = static_cast<uint8_t>((value >> 8) & 0xFF);
-    frame.data[2] = static_cast<uint8_t>((value >> 16) & 0xFF);
-    frame.data[3] = static_cast<uint8_t>((value >> 24) & 0xFF);
+    frame->id = can_id + id_offset;
+    frame->len = 4;
+    frame->data.resize(frame->len);
+    frame->data[0] = static_cast<uint8_t>(value & 0xFF);
+    frame->data[1] = static_cast<uint8_t>((value >> 8) & 0xFF);
+    frame->data[2] = static_cast<uint8_t>((value >> 16) & 0xFF);
+    frame->data[3] = static_cast<uint8_t>((value >> 24) & 0xFF);
   } 
   else if (id_offset == CanIdOffset::STATUS_REQ_ID_OFFSET) 
   {
-    // 五字节命令
-    frame.id = can_id + id_offset;
-    frame.len = 0;
+    frame->id = can_id + id_offset;
+    frame->len = 0;
   }
 
-  can_pub_->publish(frame);
+  can_pub_->publish(std::move(frame));
 }
 
 bool DualArmHardwareInterface::write_register(uint32_t can_id, uint8_t addr, uint8_t values)
@@ -502,14 +536,25 @@ bool DualArmHardwareInterface::write_register(uint32_t can_id, uint8_t addr, uin
     return false;
   }
 
-  FdFrame frame(rosidl_runtime_cpp::MessageInitialization::ZERO);
+  if (!can_pub_)
+    return false;
+
+  if (can_pub_->get_subscription_count() == 0)
+  {
+    RCLCPP_WARN(node_->get_logger(), "No CAN subscription!");
+    return true;
+  }
+
+  auto frame = std::make_unique<FdFrame>();
 
   // 使用节点时钟获取时间戳
-  frame.header.stamp = node_->now();
-  frame.id = can_id;
-  frame.len = 3;
-
-  frame.data = {WRITE_CMD, addr, values};
+  frame->header.stamp = node_->now();
+  frame->id = can_id;
+  frame->len = 3;
+  frame->data.resize(frame->len);
+  frame->data[0] = WRITE_CMD;
+  frame->data[1] = addr;
+  frame->data[2] = values;
 
   can_pub_->publish(std::move(frame));
   return true;
@@ -576,110 +621,6 @@ void DualArmHardwareInterface::can_frame_cb(const FdFrame::SharedPtr msg)
   process_can_frame(frame_stamped.frame);
 }
 
-// void DualArmHardwareInterface::process_can_frame(const FdFrame& msg)
-// {
-//   std::lock_guard<std::mutex> lock(mutex_);
-
-//   if (!is_configured()) 
-//   {
-//     return; // Silently drop frames during init
-//   }
-
-//   if (!node_)
-//   {
-//     std::cerr << "Node not initialized!" << std::endl;
-//     return;
-//   }
-
-//   if (motor_configs_.empty() || hw_position_states_.empty() || 
-//       hw_velocity_states_.empty() || hw_effort_states_.empty()) 
-//   {
-//     RCLCPP_ERROR(node_->get_logger(), "Hardware interface not fully initialized");
-//     return;
-//   }
-    
-//   if (motor_configs_.size() != hw_position_states_.size()) 
-//   {
-//     RCLCPP_ERROR(node_->get_logger(), "State vector size mismatch");
-//     return;
-//   }
-    
-//   size_t joint_index = 0;
-//   bool found = false;
-//   RCLCPP_DEBUG(node_->get_logger(), "msg.id: %X", msg.id);
-
-//   for (size_t i = 0; i < motor_configs_.size(); ++i) 
-//   {
-//     const auto& can_id = motor_configs_[i].can_id;
-    
-//     if (msg.id == can_id + CanIdOffset::SERVO_RESP_ID_OFFSET) 
-//     {
-//       joint_index = i;
-//       found = true;
-
-//       if (msg.len < RX_FRAME_LEN)
-//       {
-//         RCLCPP_ERROR(node_->get_logger(), "Invalid frame length: %d (expected >= %d)", msg.len, RX_FRAME_LEN);
-//         return;
-//       } 
-
-//       float pos_ = static_cast<int32_t>(msg.data[11] << 24 | msg.data[10] << 16 | msg.data[9] << 8 | msg.data[8]) * 0.0001f - motor_configs_[i].position_offset * 0.0001f;
-//       float vel_ = static_cast<int32_t>(msg.data[7] << 24 | msg.data[6] << 16 | msg.data[5] << 8 | msg.data[4]) * 0.02f;
-//       float cur_ = static_cast<int32_t>(msg.data[3] << 24 | msg.data[2] << 16 | msg.data[1] << 8 | msg.data[0]) / 1.0f;
-          
-//       hw_position_states_[joint_index] = pos_ / 180.0f * M_PI;
-//       hw_velocity_states_[joint_index] = vel_ / 30.0f * M_PI;
-//       hw_effort_states_[joint_index] = cur_ * 0.001f ; // mA to A
-
-//       break;
-//     }
-//     else if (msg.id == can_id + CanIdOffset::STATUS_RESP_ID_OFFSET)
-//     {
-//       joint_index = i;
-//       found = true;
-
-//       // RCLCPP_INFO(node_->get_logger(), "found the inital postion %d", msg.len);
-//       if (msg.len < RX_FRAME_LEN)
-//       {
-//         RCLCPP_ERROR(node_->get_logger(), "Invalid frame length: %d (expected >= %d)", msg.len, RX_FRAME_LEN);
-//         return;
-//       }
-
-//       float pos_ = static_cast<int32_t>(msg.data[11] << 24 | msg.data[10] << 16 | msg.data[9] << 8 | msg.data[8]) * 0.0001f - motor_configs_[i].position_offset * 0.0001f;
-      
-//       if (pos_ > 180.0f)
-//       {
-//         pos_ = pos_ - 6.28f;
-//         motor_configs_[i].position_offset += 3600000;
-//       }
-//       else if (pos_< -180.0f)
-//       {
-//         pos_ = pos_ + 6.28f;
-//         motor_configs_[i].position_offset -= 3600000;
-//       }
-//       hw_position_states_[joint_index] = pos_ / 180.0f * M_PI;
-
-//       break;
-//     }
-//     else if (msg.id == can_id + CanIdOffset::POS_CTRL_ID_OFFSET)
-//     {
-//       found = true;
-//     }
-//     else if (msg.id == can_id + CanIdOffset::IAP_FLAG_ID_OFFSET)
-//     {
-//       found = true;
-//       // RCLCPP_INFO(node_->get_logger(), "Unknown CAN ID: 0x%X", msg.id);
-//       return; // 未知的CAN ID
-//     }
-
-//   }
-
-//   if (!found) 
-//   {
-//     RCLCPP_WARN_THROTTLE(node_->get_logger(), *node_->get_clock(), 1000, "Unknown CAN ID: 0x%X", msg.id);
-//   }
-// }
-
 void DualArmHardwareInterface::process_can_frame(const FdFrame& msg)
 {
   std::lock_guard<std::mutex> lock(mutex_);
@@ -689,14 +630,7 @@ void DualArmHardwareInterface::process_can_frame(const FdFrame& msg)
     return;
   }
 
-  if (motor_configs_.empty() || hw_position_states_.empty() || 
-      hw_velocity_states_.empty() || hw_effort_states_.empty()) 
-  {
-    RCLCPP_ERROR(node_->get_logger(), "Hardware interface not fully initialized");
-    return;
-  }
-
-  if (!node_ || motor_configs_.size() != hw_position_states_.size())
+  if (!node_)
   {
     RCLCPP_ERROR(node_->get_logger(), "Node not initialized!");
     return;
@@ -733,13 +667,13 @@ void DualArmHardwareInterface::process_can_frame(const FdFrame& msg)
       return;
     } 
 
-    float pos_ = extract_int32(8) * 0.0001f - config.position_offset * 0.0001f;
-    float vel_ = extract_int32(4) * 0.02f;
-    float cur_ = extract_int32(0) / 1.0f;
+    float pos = extract_int32(8) * 0.0001 - config.position_offset * 0.0001;
+    float vel = extract_int32(4) * 0.02;
+    float curr = extract_int32(0) / 1.0;
         
-    hw_position_states_[joint_index] = pos_ / 180.0f * M_PI;
-    hw_velocity_states_[joint_index] = vel_ / 30.0f * M_PI;
-    hw_effort_states_[joint_index] = cur_ * 0.001f ; // mA to A
+    hw_position_states_[joint_index] = pos / 180.0 * M_PI;
+    hw_velocity_states_[joint_index] = vel / 30.0 * M_PI;
+    hw_effort_states_[joint_index] = curr * 0.001 ; // mA to A
 
     return;
   }
@@ -751,48 +685,47 @@ void DualArmHardwareInterface::process_can_frame(const FdFrame& msg)
       return;
     }
 
-    float pos_ = extract_int32(8) * 0.0001f - config.position_offset * 0.0001f;
+    float pos = extract_int32(8) * 0.0001 - config.position_offset * 0.0001;
     
-    if (pos_ > 180.0f)
+    if (pos > 180.0)
     {
-      pos_ = pos_ - 6.28f;
+      pos -= 2.0 * M_PI;
       config.position_offset += 3600000;
     }
-    else if (pos_< -180.0f)
+    else if (pos < -180.0)
     {
-      pos_ = pos_ + 6.28f;
+      pos += 2.0 * M_PI;
       config.position_offset -= 3600000;
     }
-    hw_position_states_[joint_index] = pos_ / 180.0f * M_PI;
+    hw_position_states_[joint_index] = pos / 180.0 * M_PI;
 
     return;
   }
   else if (msg.id == target_can_id)
   {
-    // nothing to do
+    RCLCPP_WARN(node_->get_logger(), "This CAN message should be filtered by ros2_socket_can: frame id=0x%X", msg.id);
     return;
   }
   else if (msg.id == target_can_id + CanIdOffset::STATUS_REQ_ID_OFFSET)
   {
-    // nothing to do
+    RCLCPP_WARN(node_->get_logger(), "This CAN message should be filtered by ros2_socket_can: frame id=0x%X", msg.id);
     return;
   }
   else if (msg.id == target_can_id + CanIdOffset::POS_CTRL_ID_OFFSET)
   {
-    // nothing to do
+    RCLCPP_WARN(node_->get_logger(), "This CAN message should be filtered by ros2_socket_can: frame id=0x%X", msg.id);
     return;
   }
   else if (msg.id == target_can_id + CanIdOffset::IAP_FLAG_ID_OFFSET)
   {
-    // nothing to do
+    RCLCPP_WARN(node_->get_logger(), "This CAN message should be filtered by ros2_socket_can: frame id=0x%X", msg.id);
     return;
   }
 
   RCLCPP_ERROR(node_->get_logger(), "Unhandled CAN message: ID=0x%X (base=%d)", msg.id, target_can_id);
 }
 
-void DualArmHardwareInterface::produce_diagnostics(
-  diagnostic_updater::DiagnosticStatusWrapper& stat)
+void DualArmHardwareInterface::produce_diagnostics(diagnostic_updater::DiagnosticStatusWrapper& stat)
 {
   stat.summary(diagnostic_msgs::msg::DiagnosticStatus::OK, "Hardware is OK");
 }
@@ -821,30 +754,7 @@ void DualArmHardwareInterface::executor_loop(void)
     executor_->spin_once();
   }
 
-  RCLCPP_INFO(logger_, "Ednd the executor loop");
-}
-
-bool DualArmHardwareInterface::wait_for_subscription(void)
-{
-  const uint32_t MAX_ATTEMPT = 60;
-  uint32_t attempt = 0;
-
-  rclcpp::Rate rate(1);
-
-  while (rclcpp::ok())
-  {
-    if (can_pub_->get_subscription_count() > 0)
-      break;
-    
-    if (attempt > MAX_ATTEMPT)
-      return false;
-    
-    attempt++;
-    RCLCPP_WARN(logger_, "waiting for socketcan subscription");
-    rate.sleep();
-  }
-
-  return true;
+  RCLCPP_INFO(logger_, "End the executor loop");
 }
 
 bool DualArmHardwareInterface::is_configured(void) const

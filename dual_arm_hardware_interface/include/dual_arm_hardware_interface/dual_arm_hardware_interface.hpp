@@ -96,8 +96,6 @@ public:
   int32_t get_target_vel(double hw_vel_cmd) const;
   int32_t get_target_curr(double hw_eff_cmd) const;
 
-  bool wait_for_subscription(void);
-
   bool is_configured(void) const;
   void set_configured(bool state);
   bool is_activated(void) const;
