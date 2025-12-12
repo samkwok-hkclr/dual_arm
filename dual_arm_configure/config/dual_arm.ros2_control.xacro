@@ -19,7 +19,7 @@
         <state_interface name="position"/>
         <state_interface name="velocity"/>
         <param name="can_id">0x01</param>
-        <param name="position_offset">-1374770</param>
+        <param name="position_offset">0</param>
       </joint>
       <joint name="joint2_right">
         <command_interface name="position"/>
@@ -27,7 +27,7 @@
         <state_interface name="position"/>
         <state_interface name="velocity"/>
         <param name="can_id">0x02</param>
-        <param name="position_offset">10668</param>
+        <param name="position_offset">0</param>
       </joint>
       <joint name="joint3_right">
         <command_interface name="position"/>
@@ -35,7 +35,7 @@
         <state_interface name="position"/>
         <state_interface name="velocity"/>
         <param name="can_id">0x03</param>
-        <param name="position_offset">565960</param>
+        <param name="position_offset">0</param>
       </joint>
       <joint name="joint4_right">
         <command_interface name="position"/>
@@ -43,7 +43,7 @@
         <state_interface name="position"/>
         <state_interface name="velocity"/>
         <param name="can_id">0x04</param>
-        <param name="position_offset">-610192</param>
+        <param name="position_offset">0</param>
       </joint>
       <joint name="joint5_right">
         <command_interface name="position"/>
@@ -51,7 +51,7 @@
         <state_interface name="position"/>
         <state_interface name="velocity"/>
         <param name="can_id">0x05</param>
-        <param name="position_offset">1319010</param>
+        <param name="position_offset">0</param>
       </joint>
       <joint name="joint6_right">
         <command_interface name="position"/>
@@ -60,7 +60,6 @@
         <state_interface name="velocity"/>
         <param name="can_id">0x06</param>
         <param name="position_offset">0</param>
-        <!-- <param name="position_offset">-1256290</param> -->
       </joint>
       <joint name="joint7_right">
         <command_interface name="position"/>
@@ -69,7 +68,6 @@
         <state_interface name="velocity"/>
         <param name="can_id">0x07</param>
         <param name="position_offset">0</param>
-        <!-- <param name="position_offset">-64386</param> -->
       </joint>
     </ros2_control>
 
@@ -90,7 +88,7 @@
           <state_interface name="position"/>
           <state_interface name="velocity"/>
           <param name="can_id">0x01</param>
-          <param name="position_offset">-1441450</param>
+          <param name="position_offset">0</param>
         </joint>
         <joint name="joint2_left">
           <command_interface name="position"/>
@@ -98,7 +96,7 @@
           <state_interface name="position"/>
           <state_interface name="velocity"/>
           <param name="can_id">0x02</param>
-          <param name="position_offset">-1726200</param>
+          <param name="position_offset">0</param>
         </joint>
         <joint name="joint3_left">
           <command_interface name="position"/>
@@ -106,7 +104,7 @@
           <state_interface name="position"/>
           <state_interface name="velocity"/>
           <param name="can_id">0x03</param>
-          <param name="position_offset">-1708000</param>
+          <param name="position_offset">0</param>
         </joint>
         <joint name="joint4_left">
           <command_interface name="position"/>
@@ -114,7 +112,7 @@
           <state_interface name="position"/>
           <state_interface name="velocity"/>
           <param name="can_id">0x04</param>
-          <param name="position_offset">453945</param>
+          <param name="position_offset">0</param>
         </joint>
         <joint name="joint5_left">
           <command_interface name="position"/>
@@ -122,7 +120,7 @@
           <state_interface name="position"/>
           <state_interface name="velocity"/>
           <param name="can_id">0x05</param>
-          <param name="position_offset">-1427110</param>
+          <param name="position_offset">0</param>
         </joint>
         <joint name="joint6_left">
           <command_interface name="position"/>
@@ -130,7 +128,7 @@
           <state_interface name="position"/>
           <state_interface name="velocity"/>
           <param name="can_id">0x06</param>
-          <param name="position_offset">-177993</param>
+          <param name="position_offset">0</param>
         </joint>
         <joint name="joint7_left">
           <command_interface name="position"/>
@@ -139,7 +137,6 @@
           <state_interface name="velocity"/>
           <param name="can_id">0x07</param>
           <param name="position_offset">0</param>
-          <!-- <param name="position_offset">-475092</param> -->
         </joint>
     </ros2_control>
 

@@ -4,12 +4,11 @@
   <name>dual_arm_hardware_interface</name>
   <version>0.1.0</version>
   <description>dual_arm hardware interface for ROS2</description>
-  <maintainer email="your@email.com">Your Name</maintainer>
+  <maintainer email="mskwok@email.com">mskwok</maintainer>
   <license>Apache-2.0</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
   
-  <!-- 核心依赖 -->
   <depend>rclcpp</depend>
   <depend>rclcpp_lifecycle</depend>
   <depend>controller_interface</depend>
@@ -17,11 +16,9 @@
   <depend>pluginlib</depend>
   <depend>diagnostic_updater</depend>
   
-  <!-- ROS2控制相关 -->
   <depend>ros2_control</depend>
   <depend>ros2_controllers</depend>
-  
-  <!-- 其他依赖 -->
+
   <depend>ros2_socketcan</depend>
   <depend>ros2_socketcan_msgs</depend>
   <depend>control_msgs</depend>
@@ -48,6 +45,6 @@
     <build_export_depend>hardware_interface</build_export_depend>
     <build_export_depend>controller_interface</build_export_depend>
     <hardware_interface plugin="${prefix}/dual_arm_hardware_interface_plugin.xml"/>
-
   </export>
+  
 </package>
