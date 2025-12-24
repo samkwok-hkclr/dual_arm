@@ -1,8 +1,123 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
 
+  <xacro:macro name="mdh_to_origin" params="a d alpha theta">
+    <xacro:property name="c_alpha" value="${cos(alpha)}"/>
+    <xacro:property name="s_alpha" value="${sin(alpha)}"/>
+    <xacro:property name="c_theta" value="${cos(theta)}"/>
+    <xacro:property name="s_theta" value="${sin(theta)}"/>
+
+    <!-- Calculate translation -->
+    <!-- Translation in local frame after R_z(theta) and T_z(d) is [a, 0, d] -->
+    <!-- Then rotate by R_x(alpha) -->
+    <xacro:property name="x" value="${a * 1 + 0 * 0 + d * 0}"/>  <!-- a*cos(0) + 0*cos(alpha)? Actually R_x(alpha) * [a,0,d] -->
+    <xacro:property name="y" value="${a * 0 + 0 * c_alpha + d * -s_alpha}"/>
+    <xacro:property name="z" value="${a * 0 + 0 * s_alpha + d * c_alpha}"/>
+    
+    <!-- Calculate rotation matrix from R_x(alpha) * R_z(theta) -->
+    <xacro:property name="r00" value="${c_theta}"/>
+    <xacro:property name="r01" value="${-s_theta}"/>
+    <xacro:property name="r02" value="${0}"/>
+    <xacro:property name="r10" value="${c_alpha * s_theta}"/>
+    <xacro:property name="r11" value="${c_alpha * c_theta}"/>
+    <xacro:property name="r12" value="${-s_alpha}"/>
+    <xacro:property name="r20" value="${s_alpha * s_theta}"/>
+    <xacro:property name="r21" value="${s_alpha * c_theta}"/>
+    <xacro:property name="r22" value="${c_alpha}"/>
+    
+    <!-- Convert rotation matrix to RPY (fixed-axis XYZ) -->
+    <!-- There are singularities at pitch = +-pi/2. We need to handle the general case. -->
+    <!-- Check for gimbal lock by checking if r20^2 is close to 1 -->
+    <xacro:property name="eps" value="1e-12"/>
+    <xacro:property name="r20_sq" value="${r20 * r20}"/>
+    
+    <!-- If 1 - r20^2 > eps, then no gimbal lock -->
+    <xacro:if value="${1 - r20_sq &gt; eps}">
+      <!-- General case: no gimbal lock -->
+      <xacro:property name="pitch" value="${atan2(-r20, sqrt(r00*r00 + r10*r10))}"/>
+      <xacro:property name="roll" value="${atan2(r21, r22)}"/>
+      <xacro:property name="yaw" value="${atan2(r10, r00)}"/>
+    </xacro:if>
+    <xacro:unless value="${1 - r20_sq &gt; eps}">
+      <!-- Gimbal lock case: pitch = +-pi/2 -->
+      <xacro:property name="pitch" value="${atan2(-r20, 0)}"/>
+      <xacro:property name="roll" value="${0}"/>
+      <xacro:property name="yaw" value="${atan2(-r01, r11)}"/>
+    </xacro:unless>
+    
+    <!-- Output the origin transform -->
+    <origin xyz="${x} ${y} ${z}" rpy="${roll} ${pitch} ${yaw}"/>
+  </xacro:macro>
+
   <xacro:macro name="dual_arm" params="name parent *origin">
-  
+
+    <xacro:property name="M_PI" value="3.14159265359" />
+    <xacro:property name="M_PI_2" value="1.57079632679" />  
+
+    <xacro:property name="left_alpha_1" value="${-90.000000 * M_PI / 180}" />
+    <xacro:property name="left_alpha_2" value="${-90.005000 * M_PI / 180}" />
+    <xacro:property name="left_alpha_3" value="${90.048000 * M_PI / 180}" />
+    <xacro:property name="left_alpha_4" value="${-90.037000 * M_PI / 180}" />
+    <xacro:property name="left_alpha_5" value="${89.920000 * M_PI / 180}" />
+    <xacro:property name="left_alpha_6" value="${-89.729000 * M_PI / 180}" />
+    <xacro:property name="left_alpha_7" value="${90.087000 * M_PI / 180}" />
+
+    <xacro:property name="left_a_1" value="${0.000000 / 1000}" />
+    <xacro:property name="left_a_2" value="${0.026000 / 1000}" />
+    <xacro:property name="left_a_3" value="${0.063000 / 1000}" />
+    <xacro:property name="left_a_4" value="${38.590000 / 1000}" />
+    <xacro:property name="left_a_5" value="${0.055000 / 1000}" />
+    <xacro:property name="left_a_6" value="${0.171000 / 1000}" />
+    <xacro:property name="left_a_7" value="${66.305000 / 1000}" />
+
+    <xacro:property name="left_theta_1" value="${90.022000 * M_PI / 180}" />
+    <xacro:property name="left_theta_2" value="${0.334000 * M_PI / 180}" />
+    <xacro:property name="left_theta_3" value="${0.171000 * M_PI / 180}" />
+    <xacro:property name="left_theta_4" value="${-0.469000 * M_PI / 180}" />
+    <xacro:property name="left_theta_5" value="${0.684000 * M_PI / 180}" />
+    <xacro:property name="left_theta_6" value="${-91.261000 * M_PI / 180}" />
+    <xacro:property name="left_theta_7" value="${-0.851000 * M_PI / 180}" />
+
+    <xacro:property name="left_d_1" value="${209.000000 / 1000}" />
+    <xacro:property name="left_d_2" value="${-0.126000 / 1000}" />
+    <xacro:property name="left_d_3" value="${310.064000 / 1000}" />
+    <xacro:property name="left_d_4" value="${0.176000 / 1000}" />
+    <xacro:property name="left_d_5" value="${310.425000 / 1000}" />
+    <xacro:property name="left_d_6" value="${0.366000 / 1000}" />
+    <xacro:property name="left_d_7" value="${-1.004000 / 1000}" />
+
+    <xacro:property name="right_alpha_1" value="${-90.000000 * M_PI / 180}" />
+    <xacro:property name="right_alpha_2" value="${90.060000 * M_PI / 180}" />
+    <xacro:property name="right_alpha_3" value="${-90.065000 * M_PI / 180}" />
+    <xacro:property name="right_alpha_4" value="${90.053000 * M_PI / 180}" />
+    <xacro:property name="right_alpha_5" value="${-89.968000 * M_PI / 180}" />
+    <xacro:property name="right_alpha_6" value="${90.541000 * M_PI / 180}" />
+    <xacro:property name="right_alpha_7" value="${-89.977000 * M_PI / 180}" />
+
+    <xacro:property name="right_a_1" value="${0.000000 / 1000}" />
+    <xacro:property name="right_a_2" value="${0.075000 / 1000}" />
+    <xacro:property name="right_a_3" value="${-0.255000 / 1000}" />
+    <xacro:property name="right_a_4" value="${38.818000 / 1000}" />
+    <xacro:property name="right_a_5" value="${0.833000 / 1000}" />
+    <xacro:property name="right_a_6" value="${-0.198000 / 1000}" />
+    <xacro:property name="right_a_7" value="${68.070000 / 1000}" />
+
+    <xacro:property name="right_theta_1" value="${90.000000 * M_PI / 180}" />
+    <xacro:property name="right_theta_2" value="${0.161000 * M_PI / 180}" />
+    <xacro:property name="right_theta_3" value="${0.386000 * M_PI / 180}" />
+    <xacro:property name="right_theta_4" value="${0.202000 * M_PI / 180}" />
+    <xacro:property name="right_theta_5" value="${0.062000 * M_PI / 180}" />
+    <xacro:property name="right_theta_6" value="${-89.345000 * M_PI / 180}" />
+    <xacro:property name="right_theta_7" value="${-0.200000 * M_PI / 180}" />
+
+    <xacro:property name="right_d_1" value="${-209.000000 / 1000}" />
+    <xacro:property name="right_d_2" value="${0.161000 / 1000}" />
+    <xacro:property name="right_d_3" value="${-309.635000 / 1000}" />
+    <xacro:property name="right_d_4" value="${0.165000 / 1000}" />
+    <xacro:property name="right_d_5" value="${-309.665000 / 1000}" />
+    <xacro:property name="right_d_6" value="${0.479000 / 1000}" />
+    <xacro:property name="right_d_7" value="${-0.360000 / 1000}" />
+
     <link name="arm_base_link">
       <inertial>
         <origin
@@ -71,7 +186,7 @@
       <visual>
         <origin xyz="0 0 0" rpy="0 0 0" />
         <geometry>
-          <mesh filename="package://dual_arm_description/meshes/visual/link1_right.STL" />
+          <mesh filename="package://dual_arm_description/meshes/visual/link1_mdh_right.STL" />
         </geometry>
         <material name="">
           <color rgba="0.55 0.6 0.55 1" />
@@ -81,16 +196,20 @@
       <collision>
         <origin xyz="0 0 0" rpy="0 0 0" />
         <geometry>
-          <mesh filename="package://dual_arm_description/meshes/collision/link1_right.STL" />
+          <mesh filename="package://dual_arm_description/meshes/collision/link1_mdh_right.STL" />
         </geometry>
       </collision>
     </link>
 
     <joint name="joint1_right" type="revolute">
-      <origin xyz="0 -0.155 0" rpy="-1.5707963267949 0 3.14159265359" />
+      <xacro:mdh_to_origin 
+        a="${right_a_1}" 
+        d="${right_d_1}" 
+        alpha="${right_alpha_1}" 
+        theta="${right_theta_1}" />
       <parent link="arm_ref_frame" />
       <child link="link1_right" />
-      <axis xyz="0 0 1" />
+      <axis xyz="0 0 -1" />
       <limit
         lower="-3.14159265359"
         upper="3.14159265359"
@@ -117,7 +236,7 @@
       <visual>
         <origin xyz="0 0 0" rpy="0 0 0" />
         <geometry>
-          <mesh filename="package://dual_arm_description/meshes/visual/link2_right.STL" />
+          <mesh filename="package://dual_arm_description/meshes/visual/link2_mdh_right.STL" />
         </geometry>
         <material name="">
           <color rgba="0.8 0.85 0.9 1" />
@@ -127,16 +246,20 @@
       <collision>
         <origin xyz="0 0 0" rpy="0 0 0" />
         <geometry>
-          <mesh filename="package://dual_arm_description/meshes/collision/link2_right.STL" />
+          <mesh filename="package://dual_arm_description/meshes/collision/link2_mdh_right.STL" />
         </geometry>
       </collision>
     </link>
 
     <joint name="joint2_right" type="revolute">
-      <origin xyz="0 0 0.054" rpy="0 1.5707963267949 0" />
+      <xacro:mdh_to_origin 
+        a="${right_a_2}" 
+        d="${right_d_2}" 
+        alpha="${right_alpha_2}" 
+        theta="${right_theta_2}" />
       <parent link="link1_right" />
       <child link="link2_right" />
-      <axis xyz="0 0 -1" />
+      <axis xyz="0 0 1" />
       <limit
         lower="-1.5707963268"
         upper="0.872664626"
@@ -163,7 +286,7 @@
       <visual>
         <origin xyz="0 0 0" rpy="0 0 0" />
         <geometry>
-          <mesh filename="package://dual_arm_description/meshes/visual/link3_right.STL" />
+          <mesh filename="package://dual_arm_description/meshes/visual/link3_mdh_right.STL" />
         </geometry>
         <material name="">
           <color rgba="0.8 0.85 0.9 1" />
@@ -173,16 +296,20 @@
       <collision>
         <origin xyz="0 0 0" rpy="0 0 0" />
         <geometry>
-          <mesh filename="package://dual_arm_description/meshes/collision/link3_right.STL" />
+          <mesh filename="package://dual_arm_description/meshes/collision/link3_mdh_right.STL" />
         </geometry>
       </collision>
     </link>
     
     <joint name="joint3_right" type="revolute">
-      <origin xyz="-0.07 0 0" rpy="1.5707963267949 0 -1.5707963267949" />
+      <xacro:mdh_to_origin 
+        a="${right_a_3}" 
+        d="${right_d_3}" 
+        alpha="${right_alpha_3}" 
+        theta="${right_theta_3}" />
       <parent link="link2_right" />
       <child link="link3_right" />
-      <axis xyz="0 0 1" />
+      <axis xyz="0 0 -1" />
       <limit
         lower="-3.14159265359"
         upper="3.14159265359"
@@ -209,7 +336,7 @@
       <visual>
         <origin xyz="0 0 0" rpy="0 0 0" />
         <geometry>
-          <mesh filename="package://dual_arm_description/meshes/visual/link4_right.STL" />
+          <mesh filename="package://dual_arm_description/meshes/visual/link4_mdh_right.STL" />
         </geometry>
         <material name="">
           <color rgba="0.8 0.85 0.9 1" />
@@ -219,13 +346,17 @@
       <collision>
         <origin xyz="0 0 0" rpy="0 0 0" />
         <geometry>
-          <mesh filename="package://dual_arm_description/meshes/collision/link4_right.STL" />
+          <mesh filename="package://dual_arm_description/meshes/collision/link4_mdh_right.STL" />
         </geometry>
       </collision>
     </link>
 
     <joint name="joint4_right" type="revolute">
-      <origin xyz="-0.03857 0 0.23768" rpy="0 1.5707963267949 -1.5707963267949" />
+      <xacro:mdh_to_origin 
+        a="${right_a_4}" 
+        d="${right_d_4}" 
+        alpha="${right_alpha_4}" 
+        theta="${right_theta_4}" />
       <parent link="link3_right" />
       <child link="link4_right" />
       <axis xyz="0 0 -1" />
@@ -255,7 +386,7 @@
       <visual>
         <origin xyz="0 0 0" rpy="0 0 0" />
         <geometry>
-          <mesh filename="package://dual_arm_description/meshes/visual/link5_right.STL" />
+          <mesh filename="package://dual_arm_description/meshes/visual/link5_mdh_right.STL" />
         </geometry>
         <material name="">
           <color rgba="0.8 0.85 0.9 1" />
@@ -265,16 +396,20 @@
       <collision>
         <origin xyz="0 0 0" rpy="0 0 0" />
         <geometry>
-          <mesh filename="package://dual_arm_description/meshes/collision/link5_right.STL" />
+          <mesh filename="package://dual_arm_description/meshes/collision/link5_mdh_right.STL" />
         </geometry>
       </collision>
     </link>
 
     <joint name="joint5_right" type="revolute">
-      <origin xyz="-0.175 0 0" rpy="0 -1.5707963267949 0" />
+      <xacro:mdh_to_origin 
+        a="${right_a_5}" 
+        d="${right_d_5}" 
+        alpha="${right_alpha_5}" 
+        theta="${right_theta_5}" />
       <parent link="link4_right" />
       <child link="link5_right" />
-      <axis xyz="0 0 1" />
+      <axis xyz="0 0 -1" />
       <limit
         lower="-3.14159265359"
         upper="3.14159265359"
@@ -301,7 +436,7 @@
       <visual>
         <origin xyz="0 0 0" rpy="0 0 0" />
         <geometry>
-          <mesh filename="package://dual_arm_description/meshes/visual/link6_right.STL" />
+          <mesh filename="package://dual_arm_description/meshes/visual/link6_mdh_right.STL" />
         </geometry>
         <material name="">
           <color rgba="0.8 0.85 0.9 1" />
@@ -311,16 +446,20 @@
       <collision>
         <origin xyz="0 0 0" rpy="0 0 0" />
         <geometry>
-          <mesh filename="package://dual_arm_description/meshes/collision/link6_right.STL" />
+          <mesh filename="package://dual_arm_description/meshes/collision/link6_mdh_right.STL" />
         </geometry>
       </collision>
     </link>
 
     <joint name="joint6_right" type="revolute">
-      <origin xyz="0 0 0.135" rpy="0 -1.5707963267949 0" />
+      <xacro:mdh_to_origin 
+        a="${right_a_6}" 
+        d="${right_d_6}" 
+        alpha="${right_alpha_6}" 
+        theta="${right_theta_6}" />
       <parent link="link5_right" />
       <child link="link6_right" />
-      <axis xyz="0 0 1" />
+      <axis xyz="0 0 -1" />
       <limit
         lower="-1.2217304764"
         upper="1.2217304764"
@@ -347,7 +486,7 @@
       <visual>
         <origin xyz="0 0 0" rpy="0 0 0" />
         <geometry>
-          <mesh filename="package://dual_arm_description/meshes/visual/link7_right.STL" />
+          <mesh filename="package://dual_arm_description/meshes/visual/link7_mdh_right.STL" />
         </geometry>
         <material name="">
           <color rgba="0.8 0.85 0.9 1" />
@@ -357,16 +496,20 @@
       <collision>
         <origin xyz="0 0 0" rpy="0 0 0" />
         <geometry>
-          <mesh filename="package://dual_arm_description/meshes/collision/link7_right.STL" />
+          <mesh filename="package://dual_arm_description/meshes/collision/link7_mdh_right.STL" />
         </geometry>
       </collision>
     </link>
 
     <joint name="joint7_right" type="revolute">
-      <origin xyz="0.067 0 0" rpy="-1.5707963267949 0 0" />
+      <xacro:mdh_to_origin 
+        a="${right_a_7}" 
+        d="${right_d_7}" 
+        alpha="${right_alpha_7}" 
+        theta="${right_theta_7}" />
       <parent link="link6_right" />
       <child link="link7_right" />
-      <axis xyz="0 0 -1" />
+      <axis xyz="0 0 1" />
       <limit
         lower="-1.2217304764"
         upper="1.2217304764"
@@ -393,7 +536,7 @@
       <visual>
         <origin xyz="0 0 0" rpy="0 0 0" />
         <geometry>
-          <mesh filename="package://dual_arm_description/meshes/visual/link1_left.STL" />
+          <mesh filename="package://dual_arm_description/meshes/visual/link1_mdh_left.STL" />
         </geometry>
         <material name="">
           <color rgba="0.55 0.6 0.55 1" />
@@ -403,13 +546,17 @@
       <collision>
         <origin xyz="0 0 0" rpy="0 0 0" />
         <geometry>
-          <mesh filename="package://dual_arm_description/meshes/collision/link1_left.STL" />
+          <mesh filename="package://dual_arm_description/meshes/collision/link1_mdh_left.STL" />
         </geometry>
       </collision>
     </link>
 
     <joint name="joint1_left" type="revolute">
-      <origin xyz="0 0.155 0" rpy="-1.57079632679 0 0" />
+      <xacro:mdh_to_origin 
+        a="${left_a_1}" 
+        d="${left_d_1}" 
+        alpha="${left_alpha_1}" 
+        theta="${left_theta_1}" />
       <parent link="arm_ref_frame" />
       <child link="link1_left" />
       <axis xyz="0 0 1" />
@@ -439,7 +586,7 @@
       <visual>
         <origin xyz="0 0 0" rpy="0 0 0" />
         <geometry>
-          <mesh filename="package://dual_arm_description/meshes/visual/link2_left.STL" />
+          <mesh filename="package://dual_arm_description/meshes/visual/link2_mdh_left.STL" />
         </geometry>
         <material name="">
           <color rgba="0.8 0.85 0.9 1" />
@@ -449,16 +596,20 @@
       <collision>
         <origin xyz="0 0 0" rpy="0 0 0" />
         <geometry>
-          <mesh filename="package://dual_arm_description/meshes/collision/link2_left.STL" />
+          <mesh filename="package://dual_arm_description/meshes/collision/link2_mdh_left.STL" />
         </geometry>
       </collision>
     </link>
 
     <joint name="joint2_left" type="revolute">
-      <origin xyz="0 0 0.054" rpy="0 1.5707963267949 0" />
+      <xacro:mdh_to_origin 
+        a="${left_a_2}" 
+        d="${left_d_2}" 
+        alpha="${left_alpha_2}" 
+        theta="${left_theta_2}" />
       <parent link="link1_left" />
       <child link="link2_left" />
-      <axis xyz="0 0 -1" />
+      <axis xyz="0 0 1" />
       <limit
         lower="-0.872664626"
         upper="1.5707963268"
@@ -485,7 +636,7 @@
       <visual>
         <origin xyz="0 0 0" rpy="0 0 0" />
         <geometry>
-          <mesh filename="package://dual_arm_description/meshes/visual/link3_left.STL" />
+          <mesh filename="package://dual_arm_description/meshes/visual/link3_mdh_left.STL" />
         </geometry>
         <material name="">
           <color rgba="0.8 0.85 0.9 1" />
@@ -495,13 +646,17 @@
       <collision>
         <origin xyz="0 0 0" rpy="0 0 0" />
         <geometry>
-          <mesh filename="package://dual_arm_description/meshes/collision/link3_left.STL" />
+          <mesh filename="package://dual_arm_description/meshes/collision/link3_mdh_left.STL" />
         </geometry>
       </collision>
     </link>
 
     <joint name="joint3_left" type="revolute">
-      <origin xyz="-0.07 0 0" rpy="1.5707963267949 0 -1.5707963267949" />
+      <xacro:mdh_to_origin 
+        a="${left_a_3}" 
+        d="${left_d_3}" 
+        alpha="${left_alpha_3}" 
+        theta="${left_theta_3}" />
       <parent link="link2_left" />
       <child link="link3_left" />
       <axis xyz="0 0 1" />
@@ -531,7 +686,7 @@
       <visual>
         <origin xyz="0 0 0" rpy="0 0 0" />
         <geometry>
-          <mesh filename="package://dual_arm_description/meshes/visual/link4_left.STL" />
+          <mesh filename="package://dual_arm_description/meshes/visual/link4_mdh_left.STL" />
         </geometry>
         <material name="">
           <color rgba="0.8 0.85 0.9 1" />
@@ -541,13 +696,17 @@
       <collision>
         <origin xyz="0 0 0" rpy="0 0 0" />
         <geometry>
-          <mesh filename="package://dual_arm_description/meshes/collision/link4_left.STL" />
+          <mesh filename="package://dual_arm_description/meshes/collision/link4_mdh_left.STL" />
         </geometry>
       </collision>
     </link>
 
     <joint name="joint4_left" type="revolute">
-      <origin xyz="-0.03857 0 0.23768" rpy="0 1.5707963267949 -1.5707963267949" />
+      <xacro:mdh_to_origin 
+        a="${left_a_4}" 
+        d="${left_d_4}" 
+        alpha="${left_alpha_4}" 
+        theta="${left_theta_4}" />
       <parent link="link3_left" />
       <child link="link4_left" />
       <axis xyz="0 0 -1" />
@@ -577,7 +736,7 @@
       <visual>
         <origin xyz="0 0 0" rpy="0 0 0" />
         <geometry>
-          <mesh filename="package://dual_arm_description/meshes/visual/link5_left.STL" />
+          <mesh filename="package://dual_arm_description/meshes/visual/link5_mdh_left.STL" />
         </geometry>
         <material name="">
           <color rgba="0.8 0.85 0.9 1" />
@@ -587,13 +746,17 @@
       <collision>
         <origin xyz="0 0 0" rpy="0 0 0" />
         <geometry>
-          <mesh filename="package://dual_arm_description/meshes/collision/link5_left.STL" />
+          <mesh filename="package://dual_arm_description/meshes/collision/link5_mdh_left.STL" />
         </geometry>
       </collision>
     </link>
 
     <joint name="joint5_left" type="revolute">
-      <origin xyz="-0.175 0 0" rpy="0 -1.5707963267949 0" />
+      <xacro:mdh_to_origin 
+        a="${left_a_5}" 
+        d="${left_d_5}" 
+        alpha="${left_alpha_5}" 
+        theta="${left_theta_5}" />
       <parent link="link4_left" />
       <child link="link5_left" />
       <axis xyz="0 0 1" />
@@ -623,7 +786,7 @@
       <visual>
         <origin xyz="0 0 0" rpy="0 0 0" />
         <geometry>
-          <mesh filename="package://dual_arm_description/meshes/visual/link6_left.STL" />
+          <mesh filename="package://dual_arm_description/meshes/visual/link6_mdh_left.STL" />
         </geometry>
         <material name="">
           <color rgba="0.8 0.85 0.9 1" />
@@ -633,16 +796,20 @@
       <collision>
         <origin xyz="0 0 0" rpy="0 0 0" />
         <geometry>
-          <mesh filename="package://dual_arm_description/meshes/collision/link6_left.STL" />
+          <mesh filename="package://dual_arm_description/meshes/collision/link6_mdh_left.STL" />
         </geometry>
       </collision>
     </link>
 
     <joint name="joint6_left" type="revolute">
-      <origin xyz="0 0 0.135" rpy="0 -1.5707963267949 0" />
+      <xacro:mdh_to_origin 
+        a="${left_a_6}" 
+        d="${left_d_6}" 
+        alpha="${left_alpha_6}" 
+        theta="${left_theta_6}" />
       <parent link="link5_left" />
       <child link="link6_left" />
-      <axis xyz="0 0 1" />
+      <axis xyz="0 0 -1" />
       <limit
         lower="-1.2217304764"
         upper="1.2217304764"
@@ -669,7 +836,7 @@
       <visual>
         <origin xyz="0 0 0" rpy="0 0 0" />
         <geometry>
-          <mesh filename="package://dual_arm_description/meshes/visual/link7_left.STL" />
+          <mesh filename="package://dual_arm_description/meshes/visual/link7_mdh_left.STL" />
         </geometry>
         <material name="">
           <color rgba="0.8 0.85 0.9 1" />
@@ -679,13 +846,17 @@
       <collision>
         <origin xyz="0 0 0" rpy="0 0 0" />
         <geometry>
-          <mesh filename="package://dual_arm_description/meshes/collision/link7_left.STL" />
+          <mesh filename="package://dual_arm_description/meshes/collision/link7_mdh_left.STL" />
         </geometry>
       </collision>
     </link>
 
     <joint name="joint7_left" type="revolute">
-      <origin xyz="0.067 0 0" rpy="-1.5707963267949 0 0" />
+      <xacro:mdh_to_origin 
+        a="${left_a_7}" 
+        d="${left_d_7}" 
+        alpha="${left_alpha_7}" 
+        theta="${left_theta_7}" />
       <parent link="link6_left" />
       <child link="link7_left" />
       <axis xyz="0 0 -1" />

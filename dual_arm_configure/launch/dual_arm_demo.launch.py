@@ -118,11 +118,13 @@ def generate_launch_description():
     )
     ld.add_action(ros2_control_node)
     
-    controller_names = moveit_config.trajectory_execution.get(
-        "moveit_simple_controller_manager", {}
-    ).get("controller_names", [])
+    basic_controller_names = [
+        "left_arm_controller",
+        "right_arm_controller",
+        "joint_state_broadcaster"
+    ]
 
-    for controller in controller_names + ["joint_state_broadcaster"]:
+    for controller in basic_controller_names:
         ld.add_action(
             Node(
                 package="controller_manager",
@@ -130,6 +132,24 @@ def generate_launch_description():
                 arguments=[
                     controller,
                     "--controller-manager", "/controller_manager"
+                ]
+            )
+        )
+
+    effort_controller_names = [
+        "left_arm_effort_controller",
+        "right_arm_effort_controller",
+    ]
+
+    for controller in effort_controller_names:
+        ld.add_action(
+            Node(
+                package="controller_manager",
+                executable="spawner",
+                arguments=[
+                    controller,
+                    "--controller-manager", "/controller_manager",
+                    '--inactive'
                 ]
             )
         )

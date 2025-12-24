@@ -2,7 +2,6 @@
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
 
   <xacro:macro name="dual_arm" params="name parent *origin">
-  
     <link name="arm_base_link">
       <inertial>
         <origin

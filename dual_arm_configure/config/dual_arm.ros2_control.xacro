@@ -15,7 +15,7 @@
       
       <joint name="joint1_right">
         <command_interface name="position"/>
-        <command_interface name="velocity"/>
+        <command_interface name="effort"/>
         <state_interface name="position"/>
         <state_interface name="velocity"/>
         <param name="can_id">0x01</param>
@@ -23,7 +23,7 @@
       </joint>
       <joint name="joint2_right">
         <command_interface name="position"/>
-        <command_interface name="velocity"/>
+        <command_interface name="effort"/>
         <state_interface name="position"/>
         <state_interface name="velocity"/>
         <param name="can_id">0x02</param>
@@ -31,7 +31,7 @@
       </joint>
       <joint name="joint3_right">
         <command_interface name="position"/>
-        <command_interface name="velocity"/>
+        <command_interface name="effort"/>
         <state_interface name="position"/>
         <state_interface name="velocity"/>
         <param name="can_id">0x03</param>
@@ -39,7 +39,7 @@
       </joint>
       <joint name="joint4_right">
         <command_interface name="position"/>
-        <command_interface name="velocity"/>
+        <command_interface name="effort"/>
         <state_interface name="position"/>
         <state_interface name="velocity"/>
         <param name="can_id">0x04</param>
@@ -47,7 +47,7 @@
       </joint>
       <joint name="joint5_right">
         <command_interface name="position"/>
-        <command_interface name="velocity"/>
+        <command_interface name="effort"/>
         <state_interface name="position"/>
         <state_interface name="velocity"/>
         <param name="can_id">0x05</param>
@@ -55,7 +55,7 @@
       </joint>
       <joint name="joint6_right">
         <command_interface name="position"/>
-        <command_interface name="velocity"/>
+        <command_interface name="effort"/>
         <state_interface name="position"/>
         <state_interface name="velocity"/>
         <param name="can_id">0x06</param>
@@ -63,7 +63,7 @@
       </joint>
       <joint name="joint7_right">
         <command_interface name="position"/>
-        <command_interface name="velocity"/>
+        <command_interface name="effort"/>
         <state_interface name="position"/>
         <state_interface name="velocity"/>
         <param name="can_id">0x07</param>
@@ -84,7 +84,7 @@
       </hardware>
         <joint name="joint1_left">
           <command_interface name="position"/>
-          <command_interface name="velocity"/>
+          <command_interface name="effort"/>
           <state_interface name="position"/>
           <state_interface name="velocity"/>
           <param name="can_id">0x01</param>
@@ -92,7 +92,7 @@
         </joint>
         <joint name="joint2_left">
           <command_interface name="position"/>
-          <command_interface name="velocity"/>
+          <command_interface name="effort"/>
           <state_interface name="position"/>
           <state_interface name="velocity"/>
           <param name="can_id">0x02</param>
@@ -100,7 +100,7 @@
         </joint>
         <joint name="joint3_left">
           <command_interface name="position"/>
-          <command_interface name="velocity"/>
+          <command_interface name="effort"/>
           <state_interface name="position"/>
           <state_interface name="velocity"/>
           <param name="can_id">0x03</param>
@@ -108,7 +108,7 @@
         </joint>
         <joint name="joint4_left">
           <command_interface name="position"/>
-          <command_interface name="velocity"/>
+          <command_interface name="effort"/>
           <state_interface name="position"/>
           <state_interface name="velocity"/>
           <param name="can_id">0x04</param>
@@ -116,7 +116,7 @@
         </joint>
         <joint name="joint5_left">
           <command_interface name="position"/>
-          <command_interface name="velocity"/>
+          <command_interface name="effort"/>
           <state_interface name="position"/>
           <state_interface name="velocity"/>
           <param name="can_id">0x05</param>
@@ -124,7 +124,7 @@
         </joint>
         <joint name="joint6_left">
           <command_interface name="position"/>
-          <command_interface name="velocity"/>
+          <command_interface name="effort"/>
           <state_interface name="position"/>
           <state_interface name="velocity"/>
           <param name="can_id">0x06</param>
@@ -132,7 +132,7 @@
         </joint>
         <joint name="joint7_left">
           <command_interface name="position"/>
-          <command_interface name="velocity"/>
+          <command_interface name="effort"/>
           <state_interface name="position"/>
           <state_interface name="velocity"/>
           <param name="can_id">0x07</param>
