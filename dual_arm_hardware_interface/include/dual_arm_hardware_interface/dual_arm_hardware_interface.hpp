@@ -10,6 +10,8 @@
 #include <queue>
 #include <unordered_map>
 #include <chrono>
+#include <sched.h>
+#include <errno.h>
 
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp/logging.hpp"
@@ -24,6 +26,8 @@
 #include "hardware_interface/types/hardware_interface_return_values.hpp"
 
 #include "diagnostic_updater/diagnostic_updater.hpp"
+
+#include "realtime_tools/realtime_publisher.hpp"
 
 #include "std_msgs/msg/float32.hpp"
 #include "ros2_socketcan_msgs/msg/fd_frame.hpp"
@@ -106,8 +110,6 @@ public:
   int32_t get_target_vel(double hw_vel_cmd) const;
   int32_t get_target_curr(double hw_eff_cmd) const;
 
-  bool wait_for_subscription(void);
-
   bool is_configured(void) const;
   void set_configured(bool state);
   bool is_activated(void) const;
@@ -160,6 +162,7 @@ private:
   
   rclcpp::Publisher<FdFrame>::SharedPtr can_pub_;
   rclcpp::Subscription<FdFrame>::SharedPtr can_sub_;
+  std::unique_ptr<realtime_tools::RealtimePublisher<FdFrame>> rt_can_pub_;
 
   void process_can_frame(const FdFrame::SharedPtr msg);
 

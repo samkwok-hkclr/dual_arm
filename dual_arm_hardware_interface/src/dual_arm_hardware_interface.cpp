@@ -134,6 +134,29 @@ CallbackReturn DualArmHardwareInterface::on_configure(const rclcpp_lifecycle::St
 {
   RCLCPP_INFO(logger_, "Start the configure state");
 
+  // help me to do this lambda function
+  auto wait_for_subscription = [this]() -> bool {
+    const uint8_t MAX_ATTEMPT = 60;
+    uint8_t attempt = 0;
+
+    rclcpp::Rate rate(1);
+
+    while (rclcpp::ok())
+    {
+      if (can_pub_->get_subscription_count() > 0)
+        break;
+      
+      if (attempt >= MAX_ATTEMPT)
+        return false;
+      
+      attempt++;
+      RCLCPP_WARN(logger_, "waiting for socketcan subscription");
+      rate.sleep();
+    }
+
+    return true;
+};
+
   if (!wait_for_subscription())
   {
     RCLCPP_ERROR(logger_, "Failed to wait for socketcan subscription");
@@ -218,6 +241,7 @@ CallbackReturn DualArmHardwareInterface::on_activate(const rclcpp_lifecycle::Sta
     {
       {
         std::lock_guard<std::mutex> lock(mutex_);
+
         if (hw_position_states_[i] != std::numeric_limits<double>::quiet_NaN()) 
         {
           RCLCPP_INFO(logger_, "Initial Position %f", hw_position_states_[i]);
@@ -241,7 +265,6 @@ CallbackReturn DualArmHardwareInterface::on_activate(const rclcpp_lifecycle::Sta
 
     hw_position_commands_[i] = hw_position_states_[i];
     std::this_thread::sleep_for(std::chrono::milliseconds(250));
-  
   }
 
   for (const auto& config : motor_configs_) 
@@ -534,7 +557,7 @@ hardware_interface::return_type DualArmHardwareInterface::write(const rclcpp::Ti
     switch (control_level_[i])
     {
       case integration_level_t::UNDEFINED:
-        RCLCPP_INFO_THROTTLE(node_->get_logger(), *node_->get_clock(), 1000, "No control level is using the hardware interface!");
+        RCLCPP_WARN_THROTTLE(node_->get_logger(), *node_->get_clock(), 1000, "No control level is using the hardware interface!");
         break;
       case integration_level_t::POSITION:
         if (supports_position_command_[i] && !std::isnan(hw_position_commands_[i])) 
@@ -572,6 +595,9 @@ bool DualArmHardwareInterface::initialize_can_interface()
     pub_topic,
     rclcpp::QoS(10).reliable());
 
+  rt_can_pub_ =
+    std::make_unique<realtime_tools::RealtimePublisher<FdFrame>>(can_pub_);
+
   can_sub_cbg_ = node_->create_callback_group(rclcpp::CallbackGroupType::Reentrant);
   
   rclcpp::SubscriptionOptions can_sub_options;
@@ -594,31 +620,60 @@ void DualArmHardwareInterface::send_can_frame(uint8_t can_id, uint32_t id_offset
     return;
   }
 
-  FdFrame frame(rosidl_runtime_cpp::MessageInitialization::ZERO);
+  auto frame = std::make_unique<FdFrame>(rosidl_runtime_cpp::MessageInitialization::ZERO);
 
-  frame.header.stamp = node_->now();
+  frame->header.stamp = node_->now();
 
   if (id_offset == CanIdOffset::POS_CTRL_ID_OFFSET ||
       id_offset == CanIdOffset::VEL_CTRL_ID_OFFSET ||
       id_offset == CanIdOffset::CUR_CTRL_ID_OFFSET) 
   {
     // 单字节命令
-    frame.id = can_id + id_offset;
-    frame.len = 4;
-    frame.data.resize(frame.len);
-    frame.data[0] = static_cast<uint8_t>(value & 0xFF);
-    frame.data[1] = static_cast<uint8_t>((value >> 8) & 0xFF);
-    frame.data[2] = static_cast<uint8_t>((value >> 16) & 0xFF);
-    frame.data[3] = static_cast<uint8_t>((value >> 24) & 0xFF);
+    frame->id = can_id + id_offset;
+    frame->len = 4;
+    frame->data.resize(frame->len);
+    frame->data[0] = static_cast<uint8_t>(value & 0xFF);
+    frame->data[1] = static_cast<uint8_t>((value >> 8) & 0xFF);
+    frame->data[2] = static_cast<uint8_t>((value >> 16) & 0xFF);
+    frame->data[3] = static_cast<uint8_t>((value >> 24) & 0xFF);
   } 
   else if (id_offset == CanIdOffset::STATUS_REQ_ID_OFFSET) 
   {
     // 五字节命令
-    frame.id = can_id + id_offset;
-    frame.len = 0;
+    frame->id = can_id + id_offset;
+    frame->len = 0;
   }
 
-  can_pub_->publish(frame);
+  can_pub_->publish(std::move(frame));
+
+  // if (rt_can_pub_->trylock())
+  // {
+  //   auto& frame = rt_can_pub_->msg_;
+  //   frame = FdFrame(rosidl_runtime_cpp::MessageInitialization::ZERO);
+  //   frame.header.stamp = node_->now();
+
+  //   if (id_offset == CanIdOffset::POS_CTRL_ID_OFFSET ||
+  //       id_offset == CanIdOffset::VEL_CTRL_ID_OFFSET ||
+  //       id_offset == CanIdOffset::CUR_CTRL_ID_OFFSET) 
+  //   {
+  //     // 单字节命令
+  //     frame.id = can_id + id_offset;
+  //     frame.len = 4;
+  //     frame.data.resize(frame.len);
+  //     frame.data[0] = static_cast<uint8_t>(value & 0xFF);
+  //     frame.data[1] = static_cast<uint8_t>((value >> 8) & 0xFF);
+  //     frame.data[2] = static_cast<uint8_t>((value >> 16) & 0xFF);
+  //     frame.data[3] = static_cast<uint8_t>((value >> 24) & 0xFF);
+  //   } 
+  //   else if (id_offset == CanIdOffset::STATUS_REQ_ID_OFFSET) 
+  //   {
+  //     // 五字节命令
+  //     frame.id = can_id + id_offset;
+  //     frame.len = 0;
+  //   }
+
+  //   rt_can_pub_->unlockAndPublish();
+  // }
 }
 
 bool DualArmHardwareInterface::write_register(uint8_t can_id, uint8_t addr, uint8_t values)
@@ -629,15 +684,28 @@ bool DualArmHardwareInterface::write_register(uint8_t can_id, uint8_t addr, uint
     return false;
   }
 
-  FdFrame frame(rosidl_runtime_cpp::MessageInitialization::ZERO);
+  auto frame = std::make_unique<FdFrame>(rosidl_runtime_cpp::MessageInitialization::ZERO);
 
-  frame.header.stamp = node_->now();
-  frame.id = can_id;
-  frame.len = 3;
-
-  frame.data = {WRITE_CMD, addr, values};
+  frame->header.stamp = node_->now();
+  frame->id = can_id;
+  frame->len = 3;
+  frame->data = {WRITE_CMD, addr, values};
 
   can_pub_->publish(std::move(frame));
+
+  // if (rt_can_pub_->trylock())
+  // {
+  //   auto& frame = rt_can_pub_->msg_;
+  //   frame = FdFrame(rosidl_runtime_cpp::MessageInitialization::ZERO);
+  //   frame.header.stamp = node_->now();
+  //   frame.id = can_id;
+  //   frame.len = 3;
+
+  //   frame.data = {WRITE_CMD, addr, values};
+
+  //   rt_can_pub_->unlockAndPublish();
+  // }
+
   return true;
 }
 
@@ -701,25 +769,12 @@ void DualArmHardwareInterface::can_frame_cb(const FdFrame::SharedPtr msg)
 
 void DualArmHardwareInterface::process_can_frame(const FdFrame::SharedPtr msg)
 {
-  std::lock_guard<std::mutex> lock(mutex_);
-
   if (!is_configured()) 
   {
     return;
   }
 
-  if (motor_configs_.empty() || hw_position_states_.empty() || 
-      hw_velocity_states_.empty() || hw_effort_states_.empty()) 
-  {
-    RCLCPP_ERROR(node_->get_logger(), "Hardware interface not fully initialized");
-    return;
-  }
-
-  if (!node_ || motor_configs_.size() != hw_position_states_.size())
-  {
-    RCLCPP_ERROR(node_->get_logger(), "Node not initialized!");
-    return;
-  }
+  std::lock_guard<std::mutex> lock(mutex_);
 
   const uint8_t target_can_id = msg->id & 0xF;
   RCLCPP_DEBUG(node_->get_logger(), "CAN ID: 0x%X (base: %d)", msg->id, target_can_id);
@@ -848,6 +903,13 @@ int32_t DualArmHardwareInterface::get_target_curr(double hw_eff_cmd) const
 void DualArmHardwareInterface::executor_loop(void)
 {
   RCLCPP_INFO(logger_, "Start: executor loop");
+  
+  sched_param sch;
+  sch.sched_priority = 80;
+  if (sched_setscheduler(0, SCHED_FIFO, &sch) == -1) 
+  {
+    throw std::runtime_error{std::string("failed to set scheduler: ") + std::strerror(errno)};
+  }
 
   while (rclcpp::ok() && !shutdown_requested_.load()) 
   {
@@ -855,29 +917,6 @@ void DualArmHardwareInterface::executor_loop(void)
   }
 
   RCLCPP_INFO(logger_, "End: executor loop");
-}
-
-bool DualArmHardwareInterface::wait_for_subscription(void)
-{
-  const uint8_t MAX_ATTEMPT = 60;
-  uint8_t attempt = 0;
-
-  rclcpp::Rate rate(1);
-
-  while (rclcpp::ok())
-  {
-    if (can_pub_->get_subscription_count() > 0)
-      break;
-    
-    if (attempt > MAX_ATTEMPT)
-      return false;
-    
-    attempt++;
-    RCLCPP_WARN(logger_, "waiting for socketcan subscription");
-    rate.sleep();
-  }
-
-  return true;
 }
 
 bool DualArmHardwareInterface::is_configured(void) const

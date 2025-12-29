@@ -17,7 +17,7 @@
         <chain base_link="arm_base_link" tip_link="link7_right"/>
     </group>
 
-    <group name="arms">
+    <group name="dual_arm">
         <group name="left_arm" />
         <group name="right_arm" />
     </group>
@@ -43,7 +43,7 @@
         <joint name="joint7_right" value="0"/>
     </group_state>
     
-    <group_state name="home" group="arms">
+    <group_state name="home" group="dual_arm">
         <joint name="joint1_left" value="0"/>
         <joint name="joint2_left" value="0"/>
         <joint name="joint3_left" value="0"/>

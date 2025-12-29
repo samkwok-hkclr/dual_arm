@@ -261,8 +261,8 @@
       <child link="link2_right" />
       <axis xyz="0 0 1" />
       <limit
-        lower="-1.5707963268"
-        upper="0.872664626"
+        lower="-0.872664626"
+        upper="1.5707963268"
         effort="0"
         velocity="1.0471975512" />
     </joint>

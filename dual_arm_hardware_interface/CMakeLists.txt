@@ -24,6 +24,7 @@ find_package(rclcpp_lifecycle REQUIRED)
 find_package(hardware_interface REQUIRED)
 find_package(pluginlib REQUIRED)
 find_package(diagnostic_updater REQUIRED)
+find_package(realtime_tools REQUIRED)
 
 find_package(ros2_socketcan_msgs REQUIRED)
 find_package(ros2_control REQUIRED) 
@@ -43,6 +44,7 @@ ament_target_dependencies(${PROJECT_NAME}
   hardware_interface
   pluginlib
   diagnostic_updater
+  realtime_tools
 
   ros2_socketcan_msgs
   ros2_control
