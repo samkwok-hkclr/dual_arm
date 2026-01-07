@@ -24,10 +24,13 @@ find_package(rclcpp_lifecycle REQUIRED)
 find_package(hardware_interface REQUIRED)
 find_package(pluginlib REQUIRED)
 find_package(diagnostic_updater REQUIRED)
-find_package(realtime_tools REQUIRED)
 
 find_package(ros2_socketcan_msgs REQUIRED)
 find_package(ros2_control REQUIRED) 
+
+find_package(Boost REQUIRED)
+
+find_package(dual_arm_msgs REQUIRED)
 
 file(GLOB_RECURSE PLUGINS_SRC src/*.cpp)
 add_library(${PROJECT_NAME} SHARED 
@@ -41,13 +44,15 @@ ament_target_dependencies(${PROJECT_NAME}
   rclcpp
   rclcpp_lifecycle
 
+  Boost
+
   hardware_interface
   pluginlib
   diagnostic_updater
-  realtime_tools
 
   ros2_socketcan_msgs
   ros2_control
+  dual_arm_msgs
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES

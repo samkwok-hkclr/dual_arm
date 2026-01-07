@@ -214,7 +214,7 @@
         lower="-3.14159265359"
         upper="3.14159265359"
         effort="0"
-        velocity="1.0471975512" />
+        velocity="0.3490658504" />
     </joint>
 
     <link name="link2_right">
@@ -264,7 +264,7 @@
         lower="-0.872664626"
         upper="1.5707963268"
         effort="0"
-        velocity="1.0471975512" />
+        velocity="0.436332313" />
     </joint>
 
     <link name="link3_right">
@@ -314,7 +314,7 @@
         lower="-3.14159265359"
         upper="3.14159265359"
         effort="0"
-        velocity="1.0471975512" />
+        velocity="0.5235987756" />
     </joint>
 
     <link name="link4_right">
@@ -364,7 +364,7 @@
         lower="-2.5307274154"
         upper="0.6108652382"
         effort="0"
-        velocity="1.0471975512" />
+        velocity="0.436332313" />
     </joint>
 
     <link name="link5_right">
@@ -414,7 +414,7 @@
         lower="-3.14159265359"
         upper="3.14159265359"
         effort="0"
-        velocity="1.5707963268" />
+        velocity="0.436332313" />
     </joint>
 
     <link name="link6_right">
@@ -464,7 +464,7 @@
         lower="-1.2217304764"
         upper="1.2217304764"
         effort="0"
-        velocity="1.5707963268" />
+        velocity="0.5235987756" />
     </joint>
 
     <link name="link7_right">
@@ -514,7 +514,7 @@
         lower="-1.2217304764"
         upper="1.2217304764"
         effort="0"
-        velocity="1.5707963268" />
+        velocity="0.5235987756" />
     </joint>
 
     <link name="link1_left">
@@ -564,7 +564,7 @@
         lower="-3.14159265359"
         upper="3.14159265359"
         effort="0"
-        velocity="1.0471975512" />
+        velocity="0.3490658504" />
     </joint>
 
     <link name="link2_left">
@@ -614,7 +614,7 @@
         lower="-0.872664626"
         upper="1.5707963268"
         effort="0"
-        velocity="1.0471975512" />
+        velocity="0.436332313" />
     </joint>
 
     <link name="link3_left">
@@ -664,7 +664,7 @@
         lower="-3.14159265359"
         upper="3.14159265359"
         effort="0"
-        velocity="1.0471975512" />
+        velocity="0.5235987756" />
     </joint>
 
     <link name="link4_left">
@@ -714,7 +714,7 @@
         lower="-2.5307274154"
         upper="0.6108652382"
         effort="0"
-        velocity="1.0471975512" />
+        velocity="0.436332313" />
     </joint>
 
     <link name="link5_left">
@@ -764,7 +764,7 @@
         lower="-3.14159265359"
         upper="3.14159265359"
         effort="0"
-        velocity="1.5707963268" />
+        velocity="0.436332313" />
     </joint>
 
     <link name="link6_left">
@@ -814,7 +814,7 @@
         lower="-1.2217304764"
         upper="1.2217304764"
         effort="0"
-        velocity="1.5707963268" />
+        velocity="0.5235987756" />
     </joint>
 
     <link name="link7_left">
@@ -864,7 +864,7 @@
         lower="-1.2217304764"
         upper="1.2217304764"
         effort="0"
-        velocity="1.5707963268" />
+        velocity="0.5235987756" />
     </joint>
     
   </xacro:macro>

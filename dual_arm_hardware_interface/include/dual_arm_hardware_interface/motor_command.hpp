@@ -18,7 +18,7 @@ enum CanIdOffset : uint32_t
   IAP_FLAG_ID_OFFSET    = 0x100,
   POS_CTRL_ID_OFFSET    = 0x200,
   VEL_CTRL_ID_OFFSET    = 0x300,
-  CUR_CTRL_ID_OFFSET    = 0x400,
+  CURR_CTRL_ID_OFFSET   = 0x400,
   SERVO_RESP_ID_OFFSET  = 0x500,
   STATUS_REQ_ID_OFFSET  = 0x600,
   STATUS_RESP_ID_OFFSET = 0x700,
@@ -29,6 +29,21 @@ enum MotorMode : uint8_t
   EFFORT_MODE   = 0x01,
   VELOCITY_MODE = 0x02,
   POSITION_MODE = 0x03,
+};
+
+enum MotorRegister : uint8_t
+{
+  SYSTEM_VOLTAGE = 0x05,
+  SYSTEM_TEMP    = 0x06, 
+  CURRENT_P      = 0x51,
+  CURRENT_I      = 0x52,
+  CURRENT_D      = 0x53,
+  VELOCITY_P     = 0x54,
+  VELOCITY_I     = 0x55,
+  VELOCITY_D     = 0x56,
+  POSITION_P     = 0x58,
+  POSITION_I     = 0x59,
+  POSITION_D     = 0x5A,
 };
 
 enum ErrorCode : uint16_t 
