@@ -38,8 +38,6 @@
 #include "dual_arm_msgs/msg/arm_config.hpp"
 #include "dual_arm_msgs/msg/arm_status.hpp"
 
-using namespace std::chrono_literals;
-
 using CallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
 
 namespace dual_arm_hardware_interface 
@@ -167,7 +165,7 @@ private:
   std::shared_ptr<diagnostic_updater::Updater> updater_;
 
   std::shared_ptr<rclcpp::Node> node_;
-  std::shared_ptr<rclcpp::executors::SingleThreadedExecutor> executor_;
+  std::shared_ptr<rclcpp::executors::MultiThreadedExecutor> executor_;
 
   std::atomic<bool> shutdown_requested_;
   std::thread executor_thread_;
@@ -180,8 +178,8 @@ private:
   std::string can_interface_;
 
   std::mutex mutex_;
-  std::atomic<bool> activated_{false};
-  std::atomic<bool> configured_{false};
+  std::atomic<bool> activated_;
+  std::atomic<bool> configured_;
   
   std::unordered_map<std::string, size_t> joint_indices_;
 
@@ -203,6 +201,9 @@ private:
 
   std::mutex control_level_mutex_;
   std::vector<ControlState> control_level_;
+
+  rclcpp::CallbackGroup::SharedPtr timer_cbg;
+  rclcpp::CallbackGroup::SharedPtr sub_cbg;
 
   rclcpp::Publisher<FdFrame>::SharedPtr can_pub_;
   rclcpp::Publisher<ArmConfig>::SharedPtr arm_config_pub_;

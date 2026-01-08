@@ -4,15 +4,15 @@ namespace dual_arm_hardware_interface
 {
 
 DualArmHardwareInterface::DualArmHardwareInterface()
-  : hardware_interface::SystemInterface(), 
-  logger_(rclcpp::get_logger("dual_arm_hardware_interface")), 
-  executor_(std::make_shared<rclcpp::executors::SingleThreadedExecutor>())
+  : hardware_interface::SystemInterface(),
+  logger_(rclcpp::get_logger("dual_arm_hardware_interface")),
+  executor_(std::make_shared<rclcpp::executors::MultiThreadedExecutor>())
 {
+  set_configured(false);
+  set_activated(false);
   shutdown_requested_.store(false);
 
   executor_thread_ = std::thread(std::bind(&DualArmHardwareInterface::executor_loop, this));
-  
-  RCLCPP_INFO(logger_, "DualArmHardwareInterface initialized");
 }
 
 CallbackReturn DualArmHardwareInterface::on_init(const hardware_interface::HardwareInfo& info)
@@ -22,7 +22,10 @@ CallbackReturn DualArmHardwareInterface::on_init(const hardware_interface::Hardw
   
   std::lock_guard<std::mutex> lock(mutex_);
 
+  logger_ = rclcpp::get_logger(get_name() + "_hardware_interface");
+
   joint_indices_.reserve(info.joints.size());
+
   supports_position_command_.resize(info.joints.size(), false);
   supports_effort_command_.resize(info.joints.size(), false);
   
@@ -106,45 +109,55 @@ CallbackReturn DualArmHardwareInterface::on_init(const hardware_interface::Hardw
     return CallbackReturn::ERROR;
   }
 
-  node_ = std::make_shared<rclcpp::Node>("dual_arm_hw_interface_" + info_.name);
+  node_ = std::make_shared<rclcpp::Node>(get_name() + "_node");
 
   auto initialize_can_interface = [this]() -> bool {
     RCLCPP_INFO(node_->get_logger(), "Using CAN interface %s", can_interface_.c_str());
 
     const std::string pub_topic = "/" +  ns_ + "/" + can_interface_ + "/to_can_bus_fd";
-    const std::string sub_topic = "/" +  ns_ + "/" +  can_interface_ + "/from_can_bus_fd";
+    const std::string sub_topic = "/" +  ns_ + "/" + can_interface_ + "/from_can_bus_fd";
 
     RCLCPP_INFO(node_->get_logger(), "pub_topic %s", pub_topic.c_str());
     RCLCPP_INFO(node_->get_logger(), "sub_topic %s", sub_topic.c_str());
+
+    timer_cbg = node_->create_callback_group(rclcpp::CallbackGroupType::Reentrant);
+    sub_cbg = node_->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
+
+    rclcpp::SubscriptionOptions sub_options;
+    sub_options.callback_group = sub_cbg;
 
     can_pub_ = node_->create_publisher<FdFrame>(
       pub_topic,
       rclcpp::QoS(10).reliable());
 
     arm_config_pub_ = node_->create_publisher<ArmConfig>(
-      "/" + can_interface_ + "/arm_config",
+      "/" + get_name() + "/arm_config",
       rclcpp::QoS(10).reliable());
 
     arm_status_pub_ = node_->create_publisher<ArmStatus>(
-      "/" + can_interface_ + "/arm_status",
+      "/" + get_name() + "/arm_status",
       rclcpp::QoS(10).reliable());
 
     can_sub_ = node_->create_subscription<FdFrame>(
       sub_topic,
       rclcpp::QoS(1000).reliable(),
-      std::bind(&DualArmHardwareInterface::can_frame_cb, this, std::placeholders::_1));
+      std::bind(&DualArmHardwareInterface::can_frame_cb, this, std::placeholders::_1),
+      sub_options);
 
     read_reg_timer_ = node_->create_wall_timer(
       std::chrono::seconds(1),
-      std::bind(&DualArmHardwareInterface::read_register_cb, this));
+      std::bind(&DualArmHardwareInterface::read_register_cb, this),
+      timer_cbg);
 
     pub_config_timer_ = node_->create_wall_timer(
       std::chrono::seconds(1),
-      std::bind(&DualArmHardwareInterface::pub_config_cb, this));
+      std::bind(&DualArmHardwareInterface::pub_config_cb, this),
+      timer_cbg);
 
     pub_status_timer_ = node_->create_wall_timer(
       std::chrono::milliseconds(10),
-      std::bind(&DualArmHardwareInterface::pub_status_cb, this));
+      std::bind(&DualArmHardwareInterface::pub_status_cb, this),
+      timer_cbg);
 
     return true;
   };
@@ -583,7 +596,7 @@ hardware_interface::return_type DualArmHardwareInterface::write(const rclcpp::Ti
 {
   if (!is_activated()) 
   {
-    RCLCPP_ERROR(logger_, "Not activated");
+    // RCLCPP_ERROR(logger_, "Not activated");
     return hardware_interface::return_type::ERROR;
   }
 
@@ -703,7 +716,7 @@ void DualArmHardwareInterface::can_frame_cb(const FdFrame::SharedPtr msg)
 
 void DualArmHardwareInterface::read_register_cb()
 {
-  if (!is_configured())
+  if (!is_activated())
     return;
 
   for (const auto& it : can_id_to_index_)
@@ -717,7 +730,7 @@ void DualArmHardwareInterface::read_register_cb()
 
 void DualArmHardwareInterface::pub_config_cb()
 {
-  if (!is_configured())
+  if (!is_activated())
     return;
 
   if (!arm_config_pub_ || arm_config_pub_->get_subscription_count() == 0)
@@ -759,7 +772,7 @@ void DualArmHardwareInterface::pub_config_cb()
 
 void DualArmHardwareInterface::pub_status_cb()
 {
-  if (!is_configured())
+  if (!is_activated())
     return;
 
   if (!arm_status_pub_ || arm_status_pub_->get_subscription_count() == 0)
@@ -789,8 +802,7 @@ void DualArmHardwareInterface::pub_status_cb()
 
 void DualArmHardwareInterface::process_can_frame(const FdFrame::SharedPtr msg)
 {
-  const uint8_t target_can_id = msg->id & 0xF;
-  // RCLCPP_DEBUG(logger_, "CAN ID: 0x%X (base: %d)", msg->id, target_can_id);
+  const uint8_t target_can_id = msg->id & 0x7;
   
   switch (msg->id - target_can_id)
   {
@@ -996,8 +1008,6 @@ inline int32_t DualArmHardwareInterface::extract_int32(
 
 void DualArmHardwareInterface::executor_loop(void)
 {
-  RCLCPP_INFO(logger_, "Start: executor loop");
-  
   sched_param sch;
   sch.sched_priority = 80;
   if (sched_setscheduler(0, SCHED_FIFO, &sch) == -1) 
@@ -1009,8 +1019,6 @@ void DualArmHardwareInterface::executor_loop(void)
   {
     executor_->spin_once();
   }
-
-  RCLCPP_INFO(logger_, "End: executor loop");
 }
 
 bool DualArmHardwareInterface::is_configured(void) const
